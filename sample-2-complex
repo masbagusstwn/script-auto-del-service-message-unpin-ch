@@ -1,0 +1,304 @@
+
+
+//===== ini modifikasi tambahan ====
+
+const main_token = 'ISI_TOKEN_BOT'
+const url_web = 'ISI_URL_WEB_DEPLOY'
+
+const tgClient = new telegram.daftar(main_token)
+
+// masukkan ID kamu, jika belum tau cek di @strukturbot
+const adminBot = ISI_ID_KAMU //ini sudah disesuaikan dengan idnya
+
+// jika debug true, akan mengirimkan struktur JSON ke admin bot
+const debug = false
+
+//===== akhir modifikasi =====
+
+
+var lib = new telegramclient.telegram(main_token); //menggunakan variabel
+var tg = lib.api;
+var list_channel_chat_id = [-1001339677349, -1001199154138];
+var list_group_chat_id = [-1001351204496, -1001373572053, -1001427902782, -1001590936615];
+var is_send_as_forward = false;
+
+function setWebhook() {
+  var option = {
+    "url": url_web //menggunakan variabel
+  };
+  var data = tg.request("setWebhook", option);
+  console.log(data);
+}
+
+function getMe() {
+  console.log(tg.request("getMe"));
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput("hello");
+}
+
+function jsonToMessage(data) {
+  var message = "";
+  if (typeof data != "object") {
+    data = {};
+  }
+  for (var key in data) {
+    if (Object.hasOwnProperty.call(data, key)) {
+      var loop_data = data[key];
+      message += `\n${key}: <code>${loop_data}</code>`;
+    }
+  }
+  return message;
+}
+
+function doPost(e) {
+  if (e.postData.type == "application/json") {
+
+    var update = JSON.parse(e.postData.contents);
+
+    /**
+     * INI UNTUK MENGOLAH UPDATE
+     * KE FUNGSI DELETE SERVICE MESSAGE
+     */
+    try {
+      if (debug) tgClient.sendMessage(adminBot, JSON.stringify(update, null, 2))
+      prosesPesan(update)
+    } catch (e) {
+      tgClient.sendMessage(adminBot, e.message)
+    }
+
+    //==== akhir fungsi penambahan
+
+    if (typeof update == "object") {
+
+      if (typeof update["channel_post"] == "object") {
+        var msg = update["channel_post"];
+        var text = msg["text"] ?? "";
+        var caption = msg["caption"] ?? "";
+        var is_outgoing = msg["outgoing"] ?? false;
+        var msgr = msg["reply_to_message"] ?? false;
+        var chat_id = msg["chat"]["id"];
+        var chat_type = String(msg["chat"]["type"]).replace(RegExp("super", "i"), "");
+        var chat_title = msg["chat"]["title"] ?? "";
+        var chat_username = (msg["chat"]["username"]) ? `@${msg["chat"]["username"]}` : "";
+        var msg_id = msg["message_id"];
+        var key = { "chat": { "id": chat_id } };
+        if (RegExp("^/id$", "i").exec(text)) {
+          var option = {
+            "chat_id": msg.chat.id,
+            "text": jsonToMessage(msg["chat"]),
+            "parse_mode": "html"
+          };
+          return tg.request("sendMessage", option);
+        }
+        if (list_channel_chat_id.includes(chat_id)) {
+          if (typeof list_group_chat_id == "object") {
+            for (var i = 0; i < list_group_chat_id.length; i++) {
+              var loop_data = list_group_chat_id[i];
+              if (loop_data) {
+                try {
+                  var json_data = {
+                    "chat_id": loop_data,
+                    "from_chat_id": chat_id,
+                    "message_id": msg_id
+                  };
+                  if (!is_send_as_forward) {
+                    json_data["reply_markup"] = {
+                      "inline_keyboard": [
+                        [
+                          {
+                            "text": "🔥 DAFTAR DI SINI 🔥",
+                            "url": "https://google.com"
+                          }
+                        ],
+                        [
+                          {
+                            "text": "💥 LINK ALTERNATIF 💥",
+                            "url": "https://google.com"
+                          }
+                        ],
+
+
+                      ]
+                    };
+
+
+                  }
+                  tg.request((is_send_as_forward) ? "forwardMessage" : "copyMessage", json_data);
+                } catch (e) {
+
+                }
+              }
+            }
+          }
+        }
+      }
+
+
+      if (typeof update["message"] == "object") {
+        var msg = update["message"];
+        var text = msg["text"] ?? "";
+        var caption = msg["caption"] ?? "";
+        var is_outgoing = msg["outgoing"] ?? false;
+        var msgr = msg["reply_to_message"] ?? false;
+        var user_id = msg["from"]["id"];
+        var chat_id = msg["chat"]["id"];
+        var chat_type = String(msg["chat"]["type"]).replace(RegExp("super", "i"), "");
+        var chat_title = msg["chat"]["title"] ?? "";
+        var chat_username = (msg["chat"]["username"]) ? `@${msg["chat"]["username"]}` : "";
+        var msg_id = msg["message_id"];
+        var fromId = msg["from"]["id"];
+        var fromFname = msg["from"]["first_name"];
+        var fromLname = msg["from"]["last_name"] ?? "";
+        var fromFullName = `${fromFname} ${fromLname}`;
+        var fromUsername = (msg["from"]["username"]) ? `@${msg["from"]["username"]}` : "";
+        var fromLanguagecode = msg["from"]["language_code"] ?? "id";
+        var mentionFromMarkdown = `[${fromFullName}](tg://user?id=${user_id})`;
+        var mentionFromHtml = `<a href='tg://user?id=${user_id}'>${fromFullName}</a>`;
+        var key = { "chat": { "id": chat_id } };
+        var is_admin = false;
+        try {
+          if (text) {
+            if (RegExp("^/id$", "i").exec(text)) {
+              var option = {
+                "chat_id": msg.chat.id,
+                "text": jsonToMessage(msg["chat"]),
+                "parse_mode": "html"
+              };
+              return tg.request("sendMessage", option);
+            }
+            if (msg.text == "/start") {
+              var option = {
+                "chat_id": msg.chat.id,
+                "text": "Pastikan kakak " + fromFname + " hanya mendaftar di link official resmi, link pendaftaran klik tombol di bawah ini 👇",
+                "reply_markup": {
+                  "inline_keyboard": [
+                    [
+                      {
+                        "text": "👉 DAFTAR DI SINI 👈",
+                        "url": "https://google.com"
+                      }
+                    ]
+                  ]
+                }
+              };
+              return tg.request("sendMessage", option);
+            }
+          }
+        } catch (e) {
+          var option = {
+            "chat_id": msg.chat.id,
+            "text": e.message
+          };
+          return tg.request("sendMessage", option);
+        }
+      }
+
+    }
+
+  }
+}
+
+
+// fungsi utama untuk memproses segala pesan yang masuk
+function prosesPesan(update) {
+	
+	// deteksi tipe message
+	if (update.message) {
+		
+		// penyederhanaan variable
+		var msg = update.message;
+		
+		// deteksi event letakkan di sini
+		
+		if (msg.is_automatic_forward) {
+			//tgClient.sendMsg(msg, 'Maaf, pin pesan dari channel akan dihapus otomatis!')
+			try {
+				tgClient.request('unpinChatMessage', { chat_id: msg.chat.id , message_id: msg.message_id})
+				} catch (e) {
+				tgClient.sendMessage(msg.chat.id, 'Belum menjadi Admin!')
+			}
+			return;
+		}
+		
+		// jika ada pesan berupa text
+		if (msg.text) {
+			
+			// jika user klik start, bot akan menjawab
+			var pola = /\/start/i
+			if (pola.exec(msg.text)) {
+				Logger.log(JSON.stringify(msg, null, 2))
+				
+				//selain chat private akan dikembalikan
+				if (msg.chat.type !== "private") return;
+				
+				//jika ingin bot merespon private chat hilangkan garis // dibawah.
+				//return tgClient.sendMsg(msg, "Hi, i'm not sure i can help you!\nI am a bot only can delete service message dan unpin message sent by channel to group.")
+			}
+			
+			// jika user ketik /ping, sekalian dihitung selisihnya			
+			// balas pong dengan mereply pesan
+			var pola = /^[\/!]ping$/i
+			if (pola.exec(msg.text)) {
+				
+				if (msg.from.id !== adminBot) return;
+				
+				// awal waktu pakai timestampnya message saja
+				// jika bot macet timestamp pengirim tetap diperhitungkan
+				// pilihan lain bisa bikin time sendiri
+				var waktuAwal = msg.date
+				var hasil = tgClient.sendMessage(msg.chat.id, '<b>🏓 Pooong!</b>', 'HTML', false, false, msg.message_id)
+				
+				var newMsg = hasil.result
+				var waktuAkhir = new Date()
+				
+				// hitung selisih waktunya dalam satuan detik
+				var selisihWaktu = (waktuAkhir / 1000) - waktuAwal
+				// foto gambar disembunyikan di emoticon mie
+				var pesan = "<b>🏓 Pooong!</b> <code>" + selisihWaktu.toLocaleString() + "</code> detik."
+				
+				return tgClient.editMessageText(msg.chat.id, newMsg.message_id, false, pesan, 'HTML')
+			}
+			
+			// kalau mau kembangin sendiri menjadi bot interaktif, code nya taruh di bawah ini
+			// -- mulai custom deteksi text --
+			
+			// akhir deteksi pesan text
+		}
+		
+		
+		//hapus service message dari : NEW CHAT MEMBER
+		if (msg.new_chat_member) {
+			try{
+				tgClient.deleteMessage(msg.chat.id, msg.message_id)
+			} catch (e) { }
+			return;
+		}
+		
+		//hapus service message dari : LEFT CHAT MEMBER
+		if (msg.left_chat_member) {
+			try{
+				tgClient.deleteMessage(msg.chat.id, msg.message_id)
+			} catch (e) { }
+			return;
+		}
+		
+		//hapus service message dari : PINNED MESSAGE
+		if (msg.pinned_message) {
+			try{
+				tgClient.deleteMessage(msg.chat.id, msg.message_id)
+			} catch (e) { }
+			return;
+		}
+		
+		// akhir update message
+	}
+	
+	// deteksi callback
+	if (update.callback_query) {
+		// proses di halaman berikutnya, biar gak terlalu panjang     
+		return prosesCallback(update.callback_query)
+	}
+	
+}
