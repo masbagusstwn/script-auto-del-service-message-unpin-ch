@@ -1,0 +1,173 @@
+
+// masukkan TOKEN BOT dari BOT Father
+const token = 'PASANG_TOKEN_DISINI'
+
+const tg = new telegram.daftar(token)
+
+// masukkan ID kamu, jika belum tau cek di @strukturbot
+const adminBot = 1208857565 //ini sudah disesuaikan dengan idnya
+
+// jika debug true, akan mengirimkan struktur JSON ke admin bot
+const debug = false
+
+// -- fungsi telegram
+
+// cek informasi bot
+function getMe() {
+	let me = tg.getMe()
+	return Logger.log(me)
+}
+
+function setWebhook() {
+	var url = "PASANG_URL_DEPLOY_DISINI"
+	var r = tg.setWebhook(url)
+	return Logger.log(r)
+}
+
+// cek info hook bot
+function getWebhookInfo() {
+	let hasil = tg.getWebhookInfo()
+	return Logger.log(hasil)
+}
+
+// hapus hook
+function deleteWebhook() {
+	let hasil = tg.deleteWebhook()
+	return Logger.log(hasil)
+	
+}
+
+// fungsi buat handle hanya menerima pesan berupa POST, kalau GET keluarkan pesan error
+function doGet(e) {
+	return tg.util.outputText("Hanya data POST yang kita proses yak!");
+}
+
+// fungsi buat handle pesan POST
+function doPost(e) {
+	// data e kita verifikasi
+	let update = tg.doPost(e);
+	
+	try {
+		if (debug) tg.sendMessage(adminBot, JSON.stringify(update, null, 2))
+		prosesPesan(update)
+		} catch (e) {
+		tg.sendMessage(adminBot, e.message)
+	}
+	
+}
+
+// fungsi utama untuk memproses segala pesan yang masuk
+function prosesPesan(update) {
+	
+	// deteksi tipe message
+	if (update.message) {
+		
+		// penyederhanaan variable
+		var msg = update.message;
+		
+		// deteksi event letakkan di sini
+		
+		if (msg.is_automatic_forward) {
+			//tg.sendMsg(msg, 'Maaf, pin pesan dari channel akan dihapus otomatis!')
+			try {
+				tg.request('unpinChatMessage', { chat_id: msg.chat.id , message_id: msg.message_id})
+				} catch (e) {
+				tg.sendMessage(msg.chat.id, 'Belum menjadi Admin!')
+			}
+			return;
+		}
+		
+		// jika ada pesan berupa text
+		if (msg.text) {
+			
+			// jika user klik start, bot akan menjawab
+			var pola = /\/start/i
+			if (pola.exec(msg.text)) {
+				Logger.log(JSON.stringify(msg, null, 2))
+				
+				//selain chat private akan dikembalikan
+				if (msg.chat.type !== "private") return;
+				
+				//jika ingin bot merespon private chat hilangkan garis // dibawah.
+				//return tg.sendMsg(msg, "Hi, i'm not sure i can help you!\nI am a bot only can delete service message dan unpin message sent by channel to group.")
+			}
+			
+			// jika user ketik /ping, sekalian dihitung selisihnya			
+			// balas pong dengan mereply pesan
+			var pola = /^[\/!]ping$/i
+			if (pola.exec(msg.text)) {
+				
+				if (msg.from.id !== adminBot) return;
+				
+				// awal waktu pakai timestampnya message saja
+				// jika bot macet timestamp pengirim tetap diperhitungkan
+				// pilihan lain bisa bikin time sendiri
+				var waktuAwal = msg.date
+				var hasil = tg.sendMessage(msg.chat.id, '<b>🏓 Pooong!</b>', 'HTML', false, false, msg.message_id)
+				
+				var newMsg = hasil.result
+				var waktuAkhir = new Date()
+				
+				// hitung selisih waktunya dalam satuan detik
+				var selisihWaktu = (waktuAkhir / 1000) - waktuAwal
+				// foto gambar disembunyikan di emoticon mie
+				var pesan = "<b>🏓 Pooong!</b> <code>" + selisihWaktu.toLocaleString() + "</code> detik."
+				
+				return tg.editMessageText(msg.chat.id, newMsg.message_id, false, pesan, 'HTML')
+			}
+			
+			// kalau mau kembangin sendiri menjadi bot interaktif, code nya taruh di bawah ini
+			// -- mulai custom deteksi text --
+			
+			// akhir deteksi pesan text
+		}
+		
+		
+		//hapus service message dari : NEW CHAT MEMBER
+		if (msg.new_chat_member) {
+			try{
+				tg.deleteMessage(msg.chat.id, msg.message_id)
+			} catch (e) { }
+			return;
+		}
+		
+		//hapus service message dari : LEFT CHAT MEMBER
+		if (msg.left_chat_member) {
+			try{
+				tg.deleteMessage(msg.chat.id, msg.message_id)
+			} catch (e) { }
+			return;
+		}
+		
+		//hapus service message dari : PINNED MESSAGE
+		if (msg.pinned_message) {
+			try{
+				tg.deleteMessage(msg.chat.id, msg.message_id)
+			} catch (e) { }
+			return;
+		}
+		
+		// akhir update message
+	}
+	
+	// deteksi callback
+	if (update.callback_query) {
+		// proses di halaman berikutnya, biar gak terlalu panjang     
+		return prosesCallback(update.callback_query)
+	}
+	
+}
+
+
+//jika memiliki callback_query
+function prosesCallback(cb) {
+	
+	//contoh callback proses
+	if (/me_click/i.exec(cb.data)) {
+		var pesan = '~ hasil tidak mengkhianati usaha ~'
+		pesan += '\n\n' + ' '.repeat(12)
+		pesan += 'Semangat Belajar! ✊🏼'
+		return tg.answerCallbackQuery(cb.id, pesan, true)
+	}
+	
+}
